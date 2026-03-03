@@ -188,11 +188,18 @@ func normalizeSecret(secret string) string {
 	return "token:" + secret
 }
 
-func (c *Client) sec() string {
-	if c == nil {
-		return ""
+func map2Optional[M ~map[K]V, K comparable, V any](m M) jsonrpc.Optional[M] {
+	if m == nil {
+		return nil
 	}
-	return c.secret
+	return &m
+}
+
+func slice2Optional[S ~[]E, E any](s S) jsonrpc.Optional[S] {
+	if s == nil {
+		return nil
+	}
+	return &s
 }
 
 func (c *Client) AddURI(ctx context.Context, uris []string, options map[string]string, position *int) (string, error) {
@@ -200,18 +207,11 @@ func (c *Client) AddURI(ctx context.Context, uris []string, options map[string]s
 		return "", errors.New("uris must not be empty")
 	}
 
-	s := c.sec()
-	switch {
-	case options == nil && position == nil:
-		return c.raw.AddURI1(ctx, s, uris)
-	case position == nil:
-		return c.raw.AddURI2(ctx, s, uris, options)
-	default:
-		if options == nil {
-			options = map[string]string{}
-		}
-		return c.raw.AddURI3(ctx, s, uris, options, *position)
+	if position != nil && options == nil {
+		options = map[string]string{}
 	}
+
+	return c.raw.AddURI(ctx, c.secret, uris, map2Optional(options), position)
 }
 
 func (c *Client) AddTorrent(ctx context.Context, torrent string, uris []string, options map[string]string, position *int) (string, error) {
@@ -219,26 +219,19 @@ func (c *Client) AddTorrent(ctx context.Context, torrent string, uris []string, 
 		return "", errors.New("torrent must not be empty")
 	}
 
-	s := c.sec()
-	switch {
-	case len(uris) == 0 && options == nil && position == nil:
-		return c.raw.AddTorrent1(ctx, s, torrent)
-	case options == nil && position == nil:
-		return c.raw.AddTorrent2(ctx, s, torrent, uris)
-	case position == nil:
-		if len(uris) == 0 {
-			uris = []string{}
-		}
-		return c.raw.AddTorrent3(ctx, s, torrent, uris, options)
-	default:
-		if len(uris) == 0 {
-			uris = []string{}
-		}
-		if options == nil {
-			options = map[string]string{}
-		}
-		return c.raw.AddTorrent4(ctx, s, torrent, uris, options, *position)
+	if position != nil && options == nil {
+		options = map[string]string{}
 	}
+
+	urisArg := uris
+	switch {
+	case len(urisArg) == 0 && options == nil && position == nil:
+		urisArg = nil
+	case len(urisArg) == 0 && (options != nil || position != nil):
+		urisArg = []string{}
+	}
+
+	return c.raw.AddTorrent(ctx, c.secret, torrent, slice2Optional(urisArg), map2Optional(options), position)
 }
 
 func (c *Client) AddMetalink(ctx context.Context, metalink string, options map[string]string, position *int) (string, error) {
@@ -246,50 +239,43 @@ func (c *Client) AddMetalink(ctx context.Context, metalink string, options map[s
 		return "", errors.New("metalink must not be empty")
 	}
 
-	s := c.sec()
-	switch {
-	case options == nil && position == nil:
-		return c.raw.AddMetalink1(ctx, s, metalink)
-	case position == nil:
-		return c.raw.AddMetalink2(ctx, s, metalink, options)
-	default:
-		if options == nil {
-			options = map[string]string{}
-		}
-		return c.raw.AddMetalink3(ctx, s, metalink, options, *position)
+	if position != nil && options == nil {
+		options = map[string]string{}
 	}
+
+	return c.raw.AddMetalink(ctx, c.secret, metalink, map2Optional(options), position)
 }
 
 func (c *Client) Remove(ctx context.Context, gid string) (string, error) {
-	return c.raw.Remove(ctx, c.sec(), gid)
+	return c.raw.Remove(ctx, c.secret, gid)
 }
 
 func (c *Client) ForceRemove(ctx context.Context, gid string) (string, error) {
-	return c.raw.ForceRemove(ctx, c.sec(), gid)
+	return c.raw.ForceRemove(ctx, c.secret, gid)
 }
 
 func (c *Client) Pause(ctx context.Context, gid string) (string, error) {
-	return c.raw.Pause(ctx, c.sec(), gid)
+	return c.raw.Pause(ctx, c.secret, gid)
 }
 
 func (c *Client) PauseAll(ctx context.Context) (string, error) {
-	return c.raw.PauseAll(ctx, c.sec())
+	return c.raw.PauseAll(ctx, c.secret)
 }
 
 func (c *Client) ForcePause(ctx context.Context, gid string) (string, error) {
-	return c.raw.ForcePause(ctx, c.sec(), gid)
+	return c.raw.ForcePause(ctx, c.secret, gid)
 }
 
 func (c *Client) ForcePauseAll(ctx context.Context) (string, error) {
-	return c.raw.ForcePauseAll(ctx, c.sec())
+	return c.raw.ForcePauseAll(ctx, c.secret)
 }
 
 func (c *Client) Unpause(ctx context.Context, gid string) (string, error) {
-	return c.raw.Unpause(ctx, c.sec(), gid)
+	return c.raw.Unpause(ctx, c.secret, gid)
 }
 
 func (c *Client) UnpauseAll(ctx context.Context) (string, error) {
-	return c.raw.UnpauseAll(ctx, c.sec())
+	return c.raw.UnpauseAll(ctx, c.secret)
 }
 
 func (c *Client) TellStatus(ctx context.Context, gid string, keys ...string) (*Status, error) {
@@ -297,106 +283,95 @@ func (c *Client) TellStatus(ctx context.Context, gid string, keys ...string) (*S
 		return nil, errors.New("gid must not be empty")
 	}
 
-	if len(keys) == 0 {
-		return c.raw.TellStatus1(ctx, c.sec(), gid)
-	}
-	return c.raw.TellStatus2(ctx, c.sec(), gid, keys)
+	return c.raw.TellStatus(ctx, c.secret, gid, slice2Optional(keys))
 }
 
 func (c *Client) GetURIs(ctx context.Context, gid string) ([]URIStatus, error) {
-	return c.raw.GetURIs(ctx, c.sec(), gid)
+	return c.raw.GetURIs(ctx, c.secret, gid)
 }
 
 func (c *Client) GetFiles(ctx context.Context, gid string) ([]FileInfo, error) {
-	return c.raw.GetFiles(ctx, c.sec(), gid)
+	return c.raw.GetFiles(ctx, c.secret, gid)
 }
 
 func (c *Client) GetPeers(ctx context.Context, gid string) ([]PeerInfo, error) {
-	return c.raw.GetPeers(ctx, c.sec(), gid)
+	return c.raw.GetPeers(ctx, c.secret, gid)
 }
 
 func (c *Client) GetServers(ctx context.Context, gid string) ([]ServerInfo, error) {
-	return c.raw.GetServers(ctx, c.sec(), gid)
+	return c.raw.GetServers(ctx, c.secret, gid)
 }
 
 func (c *Client) TellActive(ctx context.Context, keys ...string) ([]*Status, error) {
-	if len(keys) == 0 {
-		return c.raw.TellActive1(ctx, c.sec())
-	}
-	return c.raw.TellActive2(ctx, c.sec(), keys)
+	return c.raw.TellActive(ctx, c.secret, slice2Optional(keys))
 }
 
 func (c *Client) TellWaiting(ctx context.Context, offset, num int, keys ...string) ([]*Status, error) {
-	if len(keys) == 0 {
-		return c.raw.TellWaiting1(ctx, c.sec(), offset, num)
-	}
-	return c.raw.TellWaiting2(ctx, c.sec(), offset, num, keys)
+	return c.raw.TellWaiting(ctx, c.secret, offset, num, slice2Optional(keys))
 }
 
 func (c *Client) TellStopped(ctx context.Context, offset, num int, keys ...string) ([]*Status, error) {
-	if len(keys) == 0 {
-		return c.raw.TellStopped1(ctx, c.sec(), offset, num)
-	}
-	return c.raw.TellStopped2(ctx, c.sec(), offset, num, keys)
+	return c.raw.TellStopped(ctx, c.secret, offset, num, slice2Optional(keys))
 }
 
 func (c *Client) ChangePosition(ctx context.Context, gid string, pos int, how string) (int, error) {
-	return c.raw.ChangePosition(ctx, c.sec(), gid, pos, how)
+	return c.raw.ChangePosition(ctx, c.secret, gid, pos, how)
 }
 
 func (c *Client) ChangeURI(ctx context.Context, gid string, fileIndex int, delURIs, addURIs []string, position *int) ([]int, error) {
-	if position == nil {
-		return c.raw.ChangeURI1(ctx, c.sec(), gid, fileIndex, delURIs, addURIs)
+	var optPosition jsonrpc.Optional[int]
+	if position != nil {
+		optPosition = position
 	}
-	return c.raw.ChangeURI2(ctx, c.sec(), gid, fileIndex, delURIs, addURIs, *position)
+	return c.raw.ChangeURI(ctx, c.secret, gid, fileIndex, delURIs, addURIs, optPosition)
 }
 
 func (c *Client) GetOption(ctx context.Context, gid string) (map[string]string, error) {
-	return c.raw.GetOption(ctx, c.sec(), gid)
+	return c.raw.GetOption(ctx, c.secret, gid)
 }
 
 func (c *Client) ChangeOption(ctx context.Context, gid string, options map[string]string) (string, error) {
-	return c.raw.ChangeOption(ctx, c.sec(), gid, options)
+	return c.raw.ChangeOption(ctx, c.secret, gid, options)
 }
 
 func (c *Client) GetGlobalOption(ctx context.Context) (map[string]string, error) {
-	return c.raw.GetGlobalOption(ctx, c.sec())
+	return c.raw.GetGlobalOption(ctx, c.secret)
 }
 
 func (c *Client) ChangeGlobalOption(ctx context.Context, options map[string]string) (string, error) {
-	return c.raw.ChangeGlobalOption(ctx, c.sec(), options)
+	return c.raw.ChangeGlobalOption(ctx, c.secret, options)
 }
 
 func (c *Client) GetGlobalStat(ctx context.Context) (*GlobalStat, error) {
-	return c.raw.GetGlobalStat(ctx, c.sec())
+	return c.raw.GetGlobalStat(ctx, c.secret)
 }
 
 func (c *Client) PurgeDownloadResult(ctx context.Context) (string, error) {
-	return c.raw.PurgeDownloadResult(ctx, c.sec())
+	return c.raw.PurgeDownloadResult(ctx, c.secret)
 }
 
 func (c *Client) RemoveDownloadResult(ctx context.Context, gid string) (string, error) {
-	return c.raw.RemoveDownloadResult(ctx, c.sec(), gid)
+	return c.raw.RemoveDownloadResult(ctx, c.secret, gid)
 }
 
 func (c *Client) GetVersion(ctx context.Context) (*VersionInfo, error) {
-	return c.raw.GetVersion(ctx, c.sec())
+	return c.raw.GetVersion(ctx, c.secret)
 }
 
 func (c *Client) GetSessionInfo(ctx context.Context) (*SessionInfo, error) {
-	return c.raw.GetSessionInfo(ctx, c.sec())
+	return c.raw.GetSessionInfo(ctx, c.secret)
 }
 
 func (c *Client) Shutdown(ctx context.Context) (string, error) {
-	return c.raw.Shutdown(ctx, c.sec())
+	return c.raw.Shutdown(ctx, c.secret)
 }
 
 func (c *Client) ForceShutdown(ctx context.Context) (string, error) {
-	return c.raw.ForceShutdown(ctx, c.sec())
+	return c.raw.ForceShutdown(ctx, c.secret)
 }
 
 func (c *Client) SaveSession(ctx context.Context) (string, error) {
-	return c.raw.SaveSession(ctx, c.sec())
+	return c.raw.SaveSession(ctx, c.secret)
 }
 
 func (c *Client) ListMethods(ctx context.Context) ([]string, error) {
@@ -419,7 +394,7 @@ func (c *Client) Multicall(ctx context.Context, calls []Multicall) ([][]string, 
 		}
 		params := append([]any(nil), mc.Params...)
 		if strings.HasPrefix(mc.MethodName, "aria2.") {
-			params = append([]any{c.sec()}, params...)
+			params = append([]any{c.secret}, params...)
 		}
 		rawCalls = append(rawCalls, map[string]any{
 			"methodName": mc.MethodName,
@@ -430,56 +405,42 @@ func (c *Client) Multicall(ctx context.Context, calls []Multicall) ([][]string, 
 	return c.raw.Multicall(ctx, rawCalls)
 }
 
-// rawClient intentionally uses fixed parameter signatures required by go-jsonrpc.
+// rawClient uses jsonrpc.Optional for trailing optional RPC params.
 type rawClient struct {
-	AddURI1 func(context.Context, string, []string) (string, error)                         `rpc_method:"aria2.addUri"`
-	AddURI2 func(context.Context, string, []string, map[string]string) (string, error)      `rpc_method:"aria2.addUri"`
-	AddURI3 func(context.Context, string, []string, map[string]string, int) (string, error) `rpc_method:"aria2.addUri"`
+	AddURI      func(context.Context, string, []string, jsonrpc.Optional[map[string]string], jsonrpc.Optional[int]) (string, error)                           `rpc_method:"aria2.addUri"`
+	AddTorrent  func(context.Context, string, string, jsonrpc.Optional[[]string], jsonrpc.Optional[map[string]string], jsonrpc.Optional[int]) (string, error) `rpc_method:"aria2.addTorrent"`
+	AddMetalink func(context.Context, string, string, jsonrpc.Optional[map[string]string], jsonrpc.Optional[int]) (string, error)                             `rpc_method:"aria2.addMetalink"`
 
-	AddTorrent1 func(context.Context, string, string) (string, error)                                   `rpc_method:"aria2.addTorrent"`
-	AddTorrent2 func(context.Context, string, string, []string) (string, error)                         `rpc_method:"aria2.addTorrent"`
-	AddTorrent3 func(context.Context, string, string, []string, map[string]string) (string, error)      `rpc_method:"aria2.addTorrent"`
-	AddTorrent4 func(context.Context, string, string, []string, map[string]string, int) (string, error) `rpc_method:"aria2.addTorrent"`
-
-	AddMetalink1 func(context.Context, string, string) (string, error)                         `rpc_method:"aria2.addMetalink"`
-	AddMetalink2 func(context.Context, string, string, map[string]string) (string, error)      `rpc_method:"aria2.addMetalink"`
-	AddMetalink3 func(context.Context, string, string, map[string]string, int) (string, error) `rpc_method:"aria2.addMetalink"`
-
-	Remove               func(context.Context, string, string) (string, error)                              `rpc_method:"aria2.remove"`
-	ForceRemove          func(context.Context, string, string) (string, error)                              `rpc_method:"aria2.forceRemove"`
-	Pause                func(context.Context, string, string) (string, error)                              `rpc_method:"aria2.pause"`
-	PauseAll             func(context.Context, string) (string, error)                                      `rpc_method:"aria2.pauseAll"`
-	ForcePause           func(context.Context, string, string) (string, error)                              `rpc_method:"aria2.forcePause"`
-	ForcePauseAll        func(context.Context, string) (string, error)                                      `rpc_method:"aria2.forcePauseAll"`
-	Unpause              func(context.Context, string, string) (string, error)                              `rpc_method:"aria2.unpause"`
-	UnpauseAll           func(context.Context, string) (string, error)                                      `rpc_method:"aria2.unpauseAll"`
-	TellStatus1          func(context.Context, string, string) (*Status, error)                             `rpc_method:"aria2.tellStatus"`
-	TellStatus2          func(context.Context, string, string, []string) (*Status, error)                   `rpc_method:"aria2.tellStatus"`
-	GetURIs              func(context.Context, string, string) ([]URIStatus, error)                         `rpc_method:"aria2.getUris"`
-	GetFiles             func(context.Context, string, string) ([]FileInfo, error)                          `rpc_method:"aria2.getFiles"`
-	GetPeers             func(context.Context, string, string) ([]PeerInfo, error)                          `rpc_method:"aria2.getPeers"`
-	GetServers           func(context.Context, string, string) ([]ServerInfo, error)                        `rpc_method:"aria2.getServers"`
-	TellActive1          func(context.Context, string) ([]*Status, error)                                   `rpc_method:"aria2.tellActive"`
-	TellActive2          func(context.Context, string, []string) ([]*Status, error)                         `rpc_method:"aria2.tellActive"`
-	TellWaiting1         func(context.Context, string, int, int) ([]*Status, error)                         `rpc_method:"aria2.tellWaiting"`
-	TellWaiting2         func(context.Context, string, int, int, []string) ([]*Status, error)               `rpc_method:"aria2.tellWaiting"`
-	TellStopped1         func(context.Context, string, int, int) ([]*Status, error)                         `rpc_method:"aria2.tellStopped"`
-	TellStopped2         func(context.Context, string, int, int, []string) ([]*Status, error)               `rpc_method:"aria2.tellStopped"`
-	ChangePosition       func(context.Context, string, string, int, string) (int, error)                    `rpc_method:"aria2.changePosition"`
-	ChangeURI1           func(context.Context, string, string, int, []string, []string) ([]int, error)      `rpc_method:"aria2.changeUri"`
-	ChangeURI2           func(context.Context, string, string, int, []string, []string, int) ([]int, error) `rpc_method:"aria2.changeUri"`
-	GetOption            func(context.Context, string, string) (map[string]string, error)                   `rpc_method:"aria2.getOption"`
-	ChangeOption         func(context.Context, string, string, map[string]string) (string, error)           `rpc_method:"aria2.changeOption"`
-	GetGlobalOption      func(context.Context, string) (map[string]string, error)                           `rpc_method:"aria2.getGlobalOption"`
-	ChangeGlobalOption   func(context.Context, string, map[string]string) (string, error)                   `rpc_method:"aria2.changeGlobalOption"`
-	GetGlobalStat        func(context.Context, string) (*GlobalStat, error)                                 `rpc_method:"aria2.getGlobalStat"`
-	PurgeDownloadResult  func(context.Context, string) (string, error)                                      `rpc_method:"aria2.purgeDownloadResult"`
-	RemoveDownloadResult func(context.Context, string, string) (string, error)                              `rpc_method:"aria2.removeDownloadResult"`
-	GetVersion           func(context.Context, string) (*VersionInfo, error)                                `rpc_method:"aria2.getVersion"`
-	GetSessionInfo       func(context.Context, string) (*SessionInfo, error)                                `rpc_method:"aria2.getSessionInfo"`
-	Shutdown             func(context.Context, string) (string, error)                                      `rpc_method:"aria2.shutdown"`
-	ForceShutdown        func(context.Context, string) (string, error)                                      `rpc_method:"aria2.forceShutdown"`
-	SaveSession          func(context.Context, string) (string, error)                                      `rpc_method:"aria2.saveSession"`
+	Remove               func(context.Context, string, string) (string, error)                                                `rpc_method:"aria2.remove"`
+	ForceRemove          func(context.Context, string, string) (string, error)                                                `rpc_method:"aria2.forceRemove"`
+	Pause                func(context.Context, string, string) (string, error)                                                `rpc_method:"aria2.pause"`
+	PauseAll             func(context.Context, string) (string, error)                                                        `rpc_method:"aria2.pauseAll"`
+	ForcePause           func(context.Context, string, string) (string, error)                                                `rpc_method:"aria2.forcePause"`
+	ForcePauseAll        func(context.Context, string) (string, error)                                                        `rpc_method:"aria2.forcePauseAll"`
+	Unpause              func(context.Context, string, string) (string, error)                                                `rpc_method:"aria2.unpause"`
+	UnpauseAll           func(context.Context, string) (string, error)                                                        `rpc_method:"aria2.unpauseAll"`
+	TellStatus           func(context.Context, string, string, jsonrpc.Optional[[]string]) (*Status, error)                   `rpc_method:"aria2.tellStatus"`
+	GetURIs              func(context.Context, string, string) ([]URIStatus, error)                                           `rpc_method:"aria2.getUris"`
+	GetFiles             func(context.Context, string, string) ([]FileInfo, error)                                            `rpc_method:"aria2.getFiles"`
+	GetPeers             func(context.Context, string, string) ([]PeerInfo, error)                                            `rpc_method:"aria2.getPeers"`
+	GetServers           func(context.Context, string, string) ([]ServerInfo, error)                                          `rpc_method:"aria2.getServers"`
+	TellActive           func(context.Context, string, jsonrpc.Optional[[]string]) ([]*Status, error)                         `rpc_method:"aria2.tellActive"`
+	TellWaiting          func(context.Context, string, int, int, jsonrpc.Optional[[]string]) ([]*Status, error)               `rpc_method:"aria2.tellWaiting"`
+	TellStopped          func(context.Context, string, int, int, jsonrpc.Optional[[]string]) ([]*Status, error)               `rpc_method:"aria2.tellStopped"`
+	ChangePosition       func(context.Context, string, string, int, string) (int, error)                                      `rpc_method:"aria2.changePosition"`
+	ChangeURI            func(context.Context, string, string, int, []string, []string, jsonrpc.Optional[int]) ([]int, error) `rpc_method:"aria2.changeUri"`
+	GetOption            func(context.Context, string, string) (map[string]string, error)                                     `rpc_method:"aria2.getOption"`
+	ChangeOption         func(context.Context, string, string, map[string]string) (string, error)                             `rpc_method:"aria2.changeOption"`
+	GetGlobalOption      func(context.Context, string) (map[string]string, error)                                             `rpc_method:"aria2.getGlobalOption"`
+	ChangeGlobalOption   func(context.Context, string, map[string]string) (string, error)                                     `rpc_method:"aria2.changeGlobalOption"`
+	GetGlobalStat        func(context.Context, string) (*GlobalStat, error)                                                   `rpc_method:"aria2.getGlobalStat"`
+	PurgeDownloadResult  func(context.Context, string) (string, error)                                                        `rpc_method:"aria2.purgeDownloadResult"`
+	RemoveDownloadResult func(context.Context, string, string) (string, error)                                                `rpc_method:"aria2.removeDownloadResult"`
+	GetVersion           func(context.Context, string) (*VersionInfo, error)                                                  `rpc_method:"aria2.getVersion"`
+	GetSessionInfo       func(context.Context, string) (*SessionInfo, error)                                                  `rpc_method:"aria2.getSessionInfo"`
+	Shutdown             func(context.Context, string) (string, error)                                                        `rpc_method:"aria2.shutdown"`
+	ForceShutdown        func(context.Context, string) (string, error)                                                        `rpc_method:"aria2.forceShutdown"`
+	SaveSession          func(context.Context, string) (string, error)                                                        `rpc_method:"aria2.saveSession"`
 
 	Multicall         func(context.Context, []map[string]any) ([][]string, error) `rpc_method:"system.multicall"`
 	ListMethods       func(context.Context) ([]string, error)                     `rpc_method:"system.listMethods"`

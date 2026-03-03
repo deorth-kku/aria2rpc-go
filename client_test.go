@@ -17,9 +17,10 @@ import (
 	"time"
 )
 
+const secret = "abc123"
+
 func TestAria2_AddURIAndTellStatus(t *testing.T) {
 	ctx := context.Background()
-	secret := "abc123"
 
 	c := startAria2ForTest(t, secret, "http")
 	defer c.Close()
@@ -70,7 +71,6 @@ func TestAria2_AddURIAndTellStatus(t *testing.T) {
 
 func TestAria2WS_OnDownloadCallbacks(t *testing.T) {
 	ctx := context.Background()
-	secret := "abc123"
 
 	startCh := make(chan string, 4)
 	completeCh := make(chan string, 4)
@@ -101,9 +101,14 @@ func TestAria2WS_OnDownloadCallbacks(t *testing.T) {
 	waitEventGID(t, completeCh, gid, "onDownloadComplete", 4*time.Second)
 }
 
+var torrentURLs = []string{
+	"https://releases.ubuntu.com/25.10/ubuntu-25.10-live-server-amd64.iso.torrent",
+	"https://cdimage.debian.org/debian-cd/current/amd64/bt-cd/debian-13.1.0-amd64-netinst.iso.torrent",
+	"https://cdimage.debian.org/debian-cd/current/amd64/bt-cd/debian-13.1.0-amd64-xfce-CD-1.iso.torrent",
+}
+
 func TestAria2WS_BTFromPublicTorrents(t *testing.T) {
 	ctx := context.Background()
-	secret := "abc123"
 
 	startCh := make(chan string, 8)
 	c := startAria2ForTest(t, secret, "ws", WithNotificationCallbacks(NotificationCallbacks{
@@ -112,12 +117,6 @@ func TestAria2WS_BTFromPublicTorrents(t *testing.T) {
 		},
 	}))
 	defer c.Close()
-
-	torrentURLs := []string{
-		"https://releases.ubuntu.com/25.10/ubuntu-25.10-live-server-amd64.iso.torrent",
-		"https://cdimage.debian.org/debian-cd/current/amd64/bt-cd/debian-13.1.0-amd64-netinst.iso.torrent",
-		"https://cdimage.debian.org/debian-cd/current/amd64/bt-cd/debian-13.1.0-amd64-xfce-CD-1.iso.torrent",
-	}
 
 	var lastErr error
 	for _, torrentURL := range torrentURLs {
@@ -157,7 +156,6 @@ func TestAria2WS_OnBtDownloadComplete(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	secret := "abc123"
 
 	btCompleteCh := make(chan string, 8)
 	c := startAria2ForTest(t, secret, "ws", WithNotificationCallbacks(NotificationCallbacks{
@@ -166,12 +164,6 @@ func TestAria2WS_OnBtDownloadComplete(t *testing.T) {
 		},
 	}))
 	defer c.Close()
-
-	torrentURLs := []string{
-		"https://releases.ubuntu.com/25.10/ubuntu-25.10-live-server-amd64.iso.torrent",
-		"https://cdimage.debian.org/debian-cd/current/amd64/bt-cd/debian-13.1.0-amd64-netinst.iso.torrent",
-		"https://cdimage.debian.org/debian-cd/current/amd64/bt-cd/debian-13.1.0-amd64-xfce-CD-1.iso.torrent",
-	}
 
 	var lastErr error
 	for _, torrentURL := range torrentURLs {
