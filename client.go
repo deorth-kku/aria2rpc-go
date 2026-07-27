@@ -290,7 +290,7 @@ func (c *Client) GetURIs(ctx context.Context, gid string) ([]URIStatus, error) {
 	return c.raw.GetURIs(ctx, c.secret, gid)
 }
 
-func (c *Client) GetFiles(ctx context.Context, gid string) ([]FileInfo, error) {
+func (c *Client) GetFiles(ctx context.Context, gid string) ([]File, error) {
 	return c.raw.GetFiles(ctx, c.secret, gid)
 }
 
@@ -421,7 +421,7 @@ type rawClient struct {
 	UnpauseAll           func(context.Context, string) (string, error)                                                        `rpc_method:"aria2.unpauseAll"`
 	TellStatus           func(context.Context, string, string, jsonrpc.Optional[[]string]) (*Status, error)                   `rpc_method:"aria2.tellStatus"`
 	GetURIs              func(context.Context, string, string) ([]URIStatus, error)                                           `rpc_method:"aria2.getUris"`
-	GetFiles             func(context.Context, string, string) ([]FileInfo, error)                                            `rpc_method:"aria2.getFiles"`
+	GetFiles             func(context.Context, string, string) ([]File, error)                                                `rpc_method:"aria2.getFiles"`
 	GetPeers             func(context.Context, string, string) ([]PeerInfo, error)                                            `rpc_method:"aria2.getPeers"`
 	GetServers           func(context.Context, string, string) ([]ServerInfo, error)                                          `rpc_method:"aria2.getServers"`
 	TellActive           func(context.Context, string, jsonrpc.Optional[[]string]) ([]*Status, error)                         `rpc_method:"aria2.tellActive"`

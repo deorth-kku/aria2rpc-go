@@ -5,7 +5,7 @@ go 1.25.0
 require github.com/filecoin-project/go-jsonrpc v0.10.1
 
 require (
-	github.com/deorth-kku/go-common v0.0.0-20260130130410-826603dc6e46 // indirect
+	github.com/deorth-kku/go-common v0.0.0-20260701073802-086b455fdbb0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/gorilla/websocket v1.5.3 // indirect
 )

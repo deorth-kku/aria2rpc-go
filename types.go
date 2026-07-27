@@ -1,98 +1,247 @@
 package aria2rpc
 
+// DownloadStatus represents the status of a download.
+type DownloadStatus string
+
+const (
+	// StatusActive represents currently downloading/seeding downloads
+	StatusActive DownloadStatus = "active"
+	// StatusWaiting represents downloads in the queue
+	StatusWaiting DownloadStatus = "waiting"
+	// StatusPaused represents paused downloads
+	StatusPaused DownloadStatus = "paused"
+	// StatusError represents downloads that were stopped because of error
+	StatusError DownloadStatus = "error"
+	// StatusCompleted represents stopped and completed downloads
+	StatusCompleted DownloadStatus = "complete"
+	// StatusRemoved represents the downloads removed by user
+	StatusRemoved DownloadStatus = "removed"
+)
+
+// ExitStatus is an integer returned by aria2 for downloads which describes why a download exited.
+type ExitStatus uint8
+
+const (
+	// Success indicates that all downloads were successful.
+	Success ExitStatus = iota
+
+	// UnknownError indicates that an unknown error occurred.
+	UnknownError
+
+	// Timeout indicates that a timeout occurred.
+	Timeout
+
+	// ResourceNotFound indicates that a resource was not found.
+	ResourceNotFound
+
+	// ResourceNotFoundReached indicates that aria2 saw the specified number of "resource not found" error.
+	ResourceNotFoundReached
+
+	// DownloadSpeedTooSlow indicates that a download aborted because download speed was too slow.
+	DownloadSpeedTooSlow
+
+	// NetworkError indicates that a network problem occurred.
+	NetworkError
+
+	// UnfinishedDownloads indicates that there were unfinished downloads.
+	UnfinishedDownloads
+
+	// RemoteNoResume indicates that the remote server did not support resume when resume was required.
+	RemoteNoResume
+
+	// NotEnoughDiskSpace indicates that there was not enough disk space available.
+	NotEnoughDiskSpace
+
+	// PieceLengthMismatch indicates that the piece length was different from one in .aria2 control file.
+	PieceLengthMismatch
+
+	// SameFileBeingDownloaded indicates that aria2 was downloading same file at that moment.
+	SameFileBeingDownloaded
+
+	// SameInfoHashBeingDownloaded indicates that aria2 was downloading same info hash torrent at that moment.
+	SameInfoHashBeingDownloaded
+
+	// FileAlreadyExists indicates that the file already existed.
+	FileAlreadyExists
+
+	// RenamingFailed indicates that renaming the file failed.
+	RenamingFailed
+
+	// CouldNotOpenExistingFile indicates that aria2 could not open existing file.
+	CouldNotOpenExistingFile
+
+	// CouldNotCreateNewFile indicates that aria2 could not create new file or truncate existing file.
+	CouldNotCreateNewFile
+
+	// FileIOError indicates that a file I/O error occurred.
+	FileIOError
+
+	// CouldNotCreateDirectory indicates that aria2 could not create directory.
+	CouldNotCreateDirectory
+
+	// NameResolutionFailed indicates that the name resolution failed.
+	NameResolutionFailed
+
+	// MetalinkParsingFailed indicates that aria2 could not parse Metalink document.
+	MetalinkParsingFailed
+
+	// FTPCommandFailed indicates that the FTP command failed.
+	FTPCommandFailed
+
+	// HTTPResponseHeaderBad indicates that the HTTP response header was bad or unexpected.
+	HTTPResponseHeaderBad
+
+	// TooManyRedirects indicates that too many redirects occurred.
+	TooManyRedirects
+
+	// HTTPAuthorizationFailed indicates that HTTP authorization failed.
+	HTTPAuthorizationFailed
+
+	// BencodedFileParseError indicates that aria2 could not parse bencoded file.
+	BencodedFileParseError
+
+	// TorrentFileCorrupt indicates that the ".torrent" file was corrupted or missing information.
+	TorrentFileCorrupt
+
+	// MagnetURIBad indicates that the magnet URI was bad.
+	MagnetURIBad
+
+	// RemoteServerHandleRequestError indicates that the remote server was unable to handle the request.
+	RemoteServerHandleRequestError
+
+	// PartialDownload indicates that the download was partially completed.
+	PartialDownload
+
+	// Removed indicates that the download was removed by the user.
+	Removed
+)
+
+// TorrentMode represents the file mode of the torrent
+type TorrentMode string
+
+const (
+	// TorrentModeSingle represents the file mode single
+	TorrentModeSingle TorrentMode = "single"
+	// TorrentModeMulti represents the file mode multi
+	TorrentModeMulti TorrentMode = "multi"
+)
+
+// URIStatusType represents the status of a URI.
+type URIStatusType string
+
+const (
+	// URIStatusUsed represents the state of the URI being used
+	URIStatusUsed URIStatusType = "used"
+	// URIStatusWaiting represents the state of the URI waiting in the queue
+	URIStatusWaiting URIStatusType = "waiting"
+)
+
 // Status represents aria2 task status.
 type Status struct {
-	GID                    string          `json:"gid,omitempty"`
-	Status                 string          `json:"status,omitempty"`
-	TotalLength            string          `json:"totalLength,omitempty"`
-	CompletedLength        string          `json:"completedLength,omitempty"`
-	UploadLength           string          `json:"uploadLength,omitempty"`
-	Bitfield               string          `json:"bitfield,omitempty"`
-	DownloadSpeed          string          `json:"downloadSpeed,omitempty"`
-	UploadSpeed            string          `json:"uploadSpeed,omitempty"`
-	InfoHash               string          `json:"infoHash,omitempty"`
-	NumSeeders             string          `json:"numSeeders,omitempty"`
-	Seeder                 string          `json:"seeder,omitempty"`
-	PieceLength            string          `json:"pieceLength,omitempty"`
-	NumPieces              string          `json:"numPieces,omitempty"`
-	Connections            string          `json:"connections,omitempty"`
-	ErrorCode              string          `json:"errorCode,omitempty"`
-	ErrorMessage           string          `json:"errorMessage,omitempty"`
-	FollowedBy             []string        `json:"followedBy,omitempty"`
-	BelongsTo              string          `json:"belongsTo,omitempty"`
-	Dir                    string          `json:"dir,omitempty"`
-	Files                  []FileInfo      `json:"files,omitempty"`
-	Bittorrent             *BittorrentInfo `json:"bittorrent,omitempty"`
-	VerifiedLength         string          `json:"verifiedLength,omitempty"`
-	VerifyIntegrityPending string          `json:"verifyIntegrityPending,omitempty"`
+	GID                    string            `json:"gid,omitzero"`
+	Status                 DownloadStatus    `json:"status,omitzero"`
+	TotalLength            uint              `json:"totalLength,string,omitzero"`
+	CompletedLength        uint              `json:"completedLength,string,omitzero"`
+	UploadLength           uint              `json:"uploadLength,string,omitzero"`
+	BitField               string            `json:"bitfield,omitzero"`
+	DownloadSpeed          uint              `json:"downloadSpeed,string,omitzero"`
+	UploadSpeed            uint              `json:"uploadSpeed,string,omitzero"`
+	InfoHash               string            `json:"infoHash,omitzero"`
+	NumSeeders             uint              `json:"numSeeders,string,omitzero"`
+	Seeder                 bool              `json:"seeder,string,omitzero"`
+	PieceLength            uint              `json:"pieceLength,string,omitzero"`
+	NumPieces              uint              `json:"numPieces,string,omitzero"`
+	Connections            uint              `json:"connections,string,omitzero"`
+	ErrorCode              ExitStatus        `json:"errorCode,string,omitzero"`
+	ErrorMessage           string            `json:"errorMessage,omitzero"`
+	FollowedBy             []string          `json:"followedBy,omitzero"`
+	Following              string            `json:"following,omitzero"`
+	BelongsTo              string            `json:"belongsTo,omitzero"`
+	Dir                    string            `json:"dir,omitzero"`
+	Files                  []File            `json:"files,omitzero"`
+	BitTorrent             *BitTorrentStatus `json:"bittorrent,omitzero"`
+	VerifiedLength         uint              `json:"verifiedLength,string,omitzero"`
+	VerifyIntegrityPending bool              `json:"verifyIntegrityPending,string,omitzero"`
 }
 
 type URIStatus struct {
-	URI    string `json:"uri,omitempty"`
-	Status string `json:"status,omitempty"`
+	URI    string        `json:"uri,omitzero"`
+	Status URIStatusType `json:"status,omitzero"`
 }
 
-type FileInfo struct {
-	Index           string      `json:"index,omitempty"`
-	Path            string      `json:"path,omitempty"`
-	Length          string      `json:"length,omitempty"`
-	CompletedLength string      `json:"completedLength,omitempty"`
-	Selected        string      `json:"selected,omitempty"`
-	URIs            []URIStatus `json:"uris,omitempty"`
+type File struct {
+	Index           uint   `json:"index,string,omitzero"`
+	Path            string `json:"path,omitzero"`
+	Length          uint   `json:"length,string,omitzero"`
+	CompletedLength uint   `json:"completedLength,string,omitzero"`
+	Selected        bool   `json:"selected,string,omitzero"`
+	URIs            []URI  `json:"uris,omitzero"`
+}
+
+// URI represents a URI used in a download.
+type URI struct {
+	URI    string        `json:"uri,omitzero"`
+	Status URIStatusType `json:"status,omitzero"`
 }
 
 type PeerInfo struct {
-	PeerID        string `json:"peerId,omitempty"`
-	IP            string `json:"ip,omitempty"`
-	Port          string `json:"port,omitempty"`
-	Bitfield      string `json:"bitfield,omitempty"`
-	AmChoking     string `json:"amChoking,omitempty"`
-	PeerChoking   string `json:"peerChoking,omitempty"`
-	DownloadSpeed string `json:"downloadSpeed,omitempty"`
-	UploadSpeed   string `json:"uploadSpeed,omitempty"`
-	Seeder        string `json:"seeder,omitempty"`
+	PeerID        string `json:"peerId,omitzero"`
+	IP            string `json:"ip,omitzero"`
+	Port          string `json:"port,omitzero"`
+	Bitfield      string `json:"bitfield,omitzero"`
+	AmChoking     string `json:"amChoking,omitzero"`
+	PeerChoking   string `json:"peerChoking,omitzero"`
+	DownloadSpeed string `json:"downloadSpeed,omitzero"`
+	UploadSpeed   string `json:"uploadSpeed,omitzero"`
+	Seeder        string `json:"seeder,omitzero"`
 }
 
 type ServerInfo struct {
-	Index   string      `json:"index,omitempty"`
-	Servers []SubServer `json:"servers,omitempty"`
+	Index   string      `json:"index,omitzero"`
+	Servers []SubServer `json:"servers,omitzero"`
 }
 
 type SubServer struct {
-	URI           string `json:"uri,omitempty"`
-	CurrentURI    string `json:"currentUri,omitempty"`
-	DownloadSpeed string `json:"downloadSpeed,omitempty"`
+	URI           string `json:"uri,omitzero"`
+	CurrentURI    string `json:"currentUri,omitzero"`
+	DownloadSpeed string `json:"downloadSpeed,omitzero"`
 }
 
-type BittorrentInfo struct {
-	AnnounceList [][]string        `json:"announceList,omitempty"`
-	Comment      string            `json:"comment,omitempty"`
-	CreationDate int64             `json:"creationDate,omitempty"`
-	Mode         string            `json:"mode,omitempty"`
-	Info         map[string]string `json:"info,omitempty"`
+// BitTorrentStatus holds information for a BitTorrent download.
+type BitTorrentStatus struct {
+	AnnounceList [][]string           `json:"announceList,omitzero"`
+	Comment      string               `json:"comment,omitzero"`
+	CreationDate int64                `json:"creationDate,omitzero"`
+	Mode         TorrentMode          `json:"mode,omitzero"`
+	Info         BitTorrentStatusInfo `json:"info,omitzero"`
+}
+
+// BitTorrentStatusInfo holds information from the info dictionary.
+type BitTorrentStatusInfo struct {
+	Name string `json:"name,omitzero"`
 }
 
 type GlobalStat struct {
-	DownloadSpeed   string `json:"downloadSpeed,omitempty"`
-	UploadSpeed     string `json:"uploadSpeed,omitempty"`
-	NumActive       string `json:"numActive,omitempty"`
-	NumWaiting      string `json:"numWaiting,omitempty"`
-	NumStopped      string `json:"numStopped,omitempty"`
-	NumStoppedTotal string `json:"numStoppedTotal,omitempty"`
+	DownloadSpeed   string `json:"downloadSpeed,omitzero"`
+	UploadSpeed     string `json:"uploadSpeed,omitzero"`
+	NumActive       string `json:"numActive,omitzero"`
+	NumWaiting      string `json:"numWaiting,omitzero"`
+	NumStopped      string `json:"numStopped,omitzero"`
+	NumStoppedTotal string `json:"numStoppedTotal,omitzero"`
 }
 
 type VersionInfo struct {
-	Version         string   `json:"version,omitempty"`
-	EnabledFeatures []string `json:"enabledFeatures,omitempty"`
+	Version         string   `json:"version,omitzero"`
+	EnabledFeatures []string `json:"enabledFeatures,omitzero"`
 }
 
 type SessionInfo struct {
-	SessionID string `json:"sessionId,omitempty"`
+	SessionID string `json:"sessionId,omitzero"`
 }
 
 // DownloadEvent is payload for aria2.onDownload* notifications.
 type DownloadEvent struct {
-	GID string `json:"gid,omitempty"`
+	GID string `json:"gid,omitzero"`
 }
 
 // Multicall item for system.multicall.

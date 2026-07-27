@@ -301,7 +301,7 @@ func waitStatusDone(t *testing.T, c *Client, gid string, timeout time.Duration) 
 				return st
 			}
 			if st.Status == "error" || st.Status == "removed" {
-				t.Fatalf("download failed: status=%s code=%s msg=%s", st.Status, st.ErrorCode, st.ErrorMessage)
+				t.Fatalf("download failed: status=%s code=%d msg=%s", st.Status, st.ErrorCode, st.ErrorMessage)
 			}
 		}
 
