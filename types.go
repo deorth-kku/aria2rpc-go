@@ -248,9 +248,3 @@ type SessionInfo struct {
 type DownloadEvent struct {
 	GID string `json:"gid,omitzero"`
 }
-
-// Multicall item for system.multicall.
-type Multicall struct {
-	MethodName string
-	Params     []any
-}

@@ -5,7 +5,6 @@ import (
 	"encoding/json/jsontext"
 	"encoding/json/v2"
 	"errors"
-	"fmt"
 	"net/http"
 	"strings"
 	"sync"
@@ -400,29 +399,6 @@ func (c *Client) ListNotifications(ctx context.Context) ([]string, error) {
 	return c.raw.ListNotifications(ctx)
 }
 
-func (c *Client) Multicall(ctx context.Context, calls []Multicall) ([][]string, error) {
-	if len(calls) == 0 {
-		return nil, errors.New("calls must not be empty")
-	}
-
-	rawCalls := make([]map[string]any, 0, len(calls))
-	for i, mc := range calls {
-		if mc.MethodName == "" {
-			return nil, fmt.Errorf("calls[%d].methodName is empty", i)
-		}
-		params := append([]any(nil), mc.Params...)
-		if strings.HasPrefix(mc.MethodName, "aria2.") {
-			params = append([]any{c.secret}, params...)
-		}
-		rawCalls = append(rawCalls, map[string]any{
-			"methodName": mc.MethodName,
-			"params":     params,
-		})
-	}
-
-	return c.raw.Multicall(ctx, rawCalls)
-}
-
 // rawClient uses jsonrpc.Optional for trailing optional RPC params.
 type rawClient struct {
 	AddURI      func(context.Context, string, []string, jsonrpc.Optional[map[string]string], jsonrpc.Optional[int]) (string, error)                           `rpc_method:"aria2.addUri"`
@@ -460,7 +436,6 @@ type rawClient struct {
 	ForceShutdown        func(context.Context, string) (string, error)                                                        `rpc_method:"aria2.forceShutdown"`
 	SaveSession          func(context.Context, string) (string, error)                                                        `rpc_method:"aria2.saveSession"`
 
-	Multicall         func(context.Context, []map[string]any) ([][]string, error) `rpc_method:"system.multicall"`
-	ListMethods       func(context.Context) ([]string, error)                     `rpc_method:"system.listMethods"`
-	ListNotifications func(context.Context) ([]string, error)                     `rpc_method:"system.listNotifications"`
+	ListMethods       func(context.Context) ([]string, error) `rpc_method:"system.listMethods"`
+	ListNotifications func(context.Context) ([]string, error) `rpc_method:"system.listNotifications"`
 }
