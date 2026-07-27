@@ -2,6 +2,7 @@ package aria2rpc
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -259,6 +260,18 @@ func startAria2ForTest(t *testing.T, secret, scheme string, opts ...Option) *Cli
 }
 
 func fetchTorrent(ctx context.Context, rawURL string) ([]byte, error) {
+	cacheDir := filepath.Join(os.TempDir(), "aria2rpc-go-torrent-cache")
+	if err := os.MkdirAll(cacheDir, 0o755); err != nil {
+		return nil, err
+	}
+
+	cacheKey := fmt.Sprintf("%x", sha256.Sum256([]byte(rawURL)))
+	cachePath := filepath.Join(cacheDir, cacheKey)
+
+	if data, err := os.ReadFile(cachePath); err == nil {
+		return data, nil
+	}
+
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, rawURL, nil)
 	if err != nil {
 		return nil, err
@@ -272,7 +285,16 @@ func fetchTorrent(ctx context.Context, rawURL string) ([]byte, error) {
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return nil, fmt.Errorf("unexpected status: %s", resp.Status)
 	}
-	return io.ReadAll(io.LimitReader(resp.Body, 2<<20))
+	data, err := io.ReadAll(io.LimitReader(resp.Body, 2<<20))
+	if err != nil {
+		return nil, err
+	}
+
+	if err := os.WriteFile(cachePath, data, 0o644); err != nil {
+		return nil, err
+	}
+
+	return data, nil
 }
 
 func pickFreePort(t *testing.T) int {

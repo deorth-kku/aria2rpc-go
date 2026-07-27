@@ -1,5 +1,9 @@
 package aria2rpc
 
+import (
+	"time"
+)
+
 // DownloadStatus represents the status of a download.
 type DownloadStatus string
 
@@ -211,7 +215,7 @@ type SubServer struct {
 type BitTorrentStatus struct {
 	AnnounceList [][]string           `json:"announceList,omitzero"`
 	Comment      string               `json:"comment,omitzero"`
-	CreationDate int64                `json:"creationDate,omitzero"`
+	CreationDate time.Time            `json:"creationDate,omitzero"`
 	Mode         TorrentMode          `json:"mode,omitzero"`
 	Info         BitTorrentStatusInfo `json:"info,omitzero"`
 }

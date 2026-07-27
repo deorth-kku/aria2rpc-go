@@ -2,11 +2,14 @@ package aria2rpc
 
 import (
 	"context"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"errors"
 	"fmt"
 	"net/http"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/filecoin-project/go-jsonrpc"
 )
@@ -88,8 +91,8 @@ func New(ctx context.Context, addr string, opts ...Option) (*Client, error) {
 	}
 	// aria2 websocket endpoint may emit id:null error responses for control frames.
 	// Disable client ping by default to avoid periodic noise from that behavior.
-	allOpts := make([]jsonrpc.Option, 0, 1+len(cfg.rpcOpts))
-	allOpts = append(allOpts, jsonrpc.WithPingInterval(0))
+	allOpts := make([]jsonrpc.Option, 0, 2+len(cfg.rpcOpts))
+	allOpts = append(allOpts, jsonrpc.WithPingInterval(0), jsonrpc.WithResultUnmarshaler(unmarshalTime))
 	allOpts = append(allOpts, cfg.rpcOpts...)
 
 	closer, err := jsonrpc.NewClient(ctx, addr, "", &c.raw, cfg.headers, allOpts...)
@@ -98,6 +101,21 @@ func New(ctx context.Context, addr string, opts ...Option) (*Client, error) {
 	}
 	c.close = closer
 	return c, nil
+}
+
+func unmarshalTime(dec *jsontext.Decoder, t *time.Time) error {
+	switch dec.PeekKind() {
+	case '0':
+		var unix int64
+		err := json.UnmarshalDecode(dec, &unix)
+		if err != nil {
+			return err
+		}
+		*t = time.Unix(unix, 0)
+		return nil
+	default:
+		return json.UnmarshalDecode(dec, t)
+	}
 }
 
 // Close closes the underlying go-jsonrpc client connection.
