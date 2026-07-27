@@ -21,7 +21,7 @@ import (
 const secret = "abc123"
 
 func TestAria2_AddURIAndTellStatus(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 
 	c := startAria2ForTest(t, secret, "http")
 	defer c.Close()
@@ -71,7 +71,7 @@ func TestAria2_AddURIAndTellStatus(t *testing.T) {
 }
 
 func TestAria2WS_OnDownloadCallbacks(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 
 	startCh := make(chan string, 4)
 	completeCh := make(chan string, 4)
@@ -109,7 +109,7 @@ var torrentURLs = []string{
 }
 
 func TestAria2WS_BTFromPublicTorrents(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 
 	startCh := make(chan string, 8)
 	c := startAria2ForTest(t, secret, "ws", WithNotificationCallbacks(NotificationCallbacks{
@@ -156,7 +156,7 @@ func TestAria2WS_OnBtDownloadComplete(t *testing.T) {
 		t.Skip("skipping slow bt-complete test, set I_HAVE_A_LOT_OF_MEMORY_AND_TIME=1 to run")
 	}
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	btCompleteCh := make(chan string, 8)
 	c := startAria2ForTest(t, secret, "ws", WithNotificationCallbacks(NotificationCallbacks{
@@ -228,7 +228,7 @@ func startAria2ForTest(t *testing.T, secret, scheme string, opts ...Option) *Cli
 	})
 
 	addr := fmt.Sprintf("%s://127.0.0.1:%d/jsonrpc", scheme, port)
-	ctx, cancel := context.WithTimeout(context.Background(), 6*time.Second)
+	ctx, cancel := context.WithTimeout(t.Context(), 6*time.Second)
 	defer cancel()
 
 	var c *Client
@@ -240,9 +240,9 @@ func startAria2ForTest(t *testing.T, secret, scheme string, opts ...Option) *Cli
 
 		baseOpts := []Option{WithSecret(secret)}
 		baseOpts = append(baseOpts, opts...)
-		c, err = New(context.Background(), addr, baseOpts...)
+		c, err = New(t.Context(), addr, baseOpts...)
 		if err == nil {
-			if _, e := c.GetVersion(context.Background()); e == nil {
+			if _, e := c.GetVersion(t.Context()); e == nil {
 				break
 			}
 			c.Close()
@@ -251,7 +251,7 @@ func startAria2ForTest(t *testing.T, secret, scheme string, opts ...Option) *Cli
 	}
 
 	t.Cleanup(func() {
-		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 2*time.Second)
+		shutdownCtx, shutdownCancel := context.WithTimeout(t.Context(), 2*time.Second)
 		defer shutdownCancel()
 		_, _ = c.ForceShutdown(shutdownCtx)
 	})
@@ -313,11 +313,11 @@ func pickFreePort(t *testing.T) int {
 
 func waitStatusDone(t *testing.T, c *Client, gid string, timeout time.Duration) *Status {
 	t.Helper()
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	ctx, cancel := context.WithTimeout(t.Context(), timeout)
 	defer cancel()
 
 	for {
-		st, err := c.TellStatus(context.Background(), gid, "gid", "status", "errorCode", "errorMessage")
+		st, err := c.TellStatus(t.Context(), gid, "gid", "status", "errorCode", "errorMessage")
 		if err == nil {
 			if st.Status == "complete" {
 				return st
