@@ -191,24 +191,25 @@ type URI struct {
 type PeerInfo struct {
 	PeerID        string `json:"peerId,omitzero"`
 	IP            string `json:"ip,omitzero"`
-	Port          string `json:"port,omitzero"`
 	Bitfield      string `json:"bitfield,omitzero"`
-	AmChoking     string `json:"amChoking,omitzero"`
-	PeerChoking   string `json:"peerChoking,omitzero"`
-	DownloadSpeed string `json:"downloadSpeed,omitzero"`
-	UploadSpeed   string `json:"uploadSpeed,omitzero"`
-	Seeder        string `json:"seeder,omitzero"`
+	DownloadSpeed uint   `json:"downloadSpeed,string,omitzero"`
+	UploadSpeed   uint   `json:"uploadSpeed,string,omitzero"`
+	// struct fields align to save on ram
+	Port        uint16 `json:"port,string,omitzero"`
+	AmChoking   bool   `json:"amChoking,string,omitzero"`
+	PeerChoking bool   `json:"peerChoking,string,omitzero"`
+	Seeder      bool   `json:"seeder,string,omitzero"`
 }
 
 type ServerInfo struct {
-	Index   string      `json:"index,omitzero"`
+	Index   uint        `json:"index,string,omitzero"`
 	Servers []SubServer `json:"servers,omitzero"`
 }
 
 type SubServer struct {
 	URI           string `json:"uri,omitzero"`
 	CurrentURI    string `json:"currentUri,omitzero"`
-	DownloadSpeed string `json:"downloadSpeed,omitzero"`
+	DownloadSpeed uint   `json:"downloadSpeed,string,omitzero"`
 }
 
 // BitTorrentStatus holds information for a BitTorrent download.
@@ -226,12 +227,12 @@ type BitTorrentStatusInfo struct {
 }
 
 type GlobalStat struct {
-	DownloadSpeed   string `json:"downloadSpeed,omitzero"`
-	UploadSpeed     string `json:"uploadSpeed,omitzero"`
-	NumActive       string `json:"numActive,omitzero"`
-	NumWaiting      string `json:"numWaiting,omitzero"`
-	NumStopped      string `json:"numStopped,omitzero"`
-	NumStoppedTotal string `json:"numStoppedTotal,omitzero"`
+	DownloadSpeed   uint `json:"downloadSpeed,string,omitzero"`
+	UploadSpeed     uint `json:"uploadSpeed,string,omitzero"`
+	NumActive       uint `json:"numActive,string,omitzero"`
+	NumWaiting      uint `json:"numWaiting,string,omitzero"`
+	NumStopped      uint `json:"numStopped,string,omitzero"`
+	NumStoppedTotal uint `json:"numStoppedTotal,string,omitzero"`
 }
 
 type VersionInfo struct {
