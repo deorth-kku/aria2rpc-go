@@ -195,32 +195,49 @@ func TestAria2WS_OnBtDownloadComplete(t *testing.T) {
 func startAria2ForTest(t *testing.T, secret, scheme string, opts ...Option) *Client {
 	t.Helper()
 
-	if _, err := exec.LookPath("aria2c"); err != nil {
-		t.Skip("aria2c not found in PATH")
+	c := startAria2ForTestShared(t, "aria2c", secret, scheme, opts)
+
+	t.Cleanup(func() {
+		shutdownCtx, shutdownCancel := context.WithTimeout(t.Context(), 2*time.Second)
+		defer shutdownCancel()
+		_, _ = c.ForceShutdown(shutdownCtx)
+	})
+
+	return c
+}
+
+// startAria2ForTestShared starts an aria2 binary (aria2c or aria2-next) and
+// waits for its JSON-RPC endpoint to become ready.
+func startAria2ForTestShared(t *testing.T, binary, secret, scheme string, opts []Option) *Client {
+	t.Helper()
+
+	if _, err := exec.LookPath(binary); err != nil {
+		t.Skipf("%s not found in PATH", binary)
 	}
 
 	port := pickFreePort(t)
 	dir := t.TempDir()
 
-	cmd := exec.Command(
-		"aria2c",
+	args := []string{
 		"--enable-rpc=true",
 		"--rpc-listen-all=false",
-		"--rpc-listen-port="+strconv.Itoa(port),
-		"--rpc-secret="+secret,
+		"--rpc-listen-port=" + strconv.Itoa(port),
+		"--rpc-secret=" + secret,
 		"--rpc-allow-origin-all=true",
 		"--max-concurrent-downloads=1",
 		"--summary-interval=0",
 		"--check-certificate=false",
 		"-d", dir,
-	)
+	}
+
+	cmd := exec.Command(binary, args...)
 
 	stderr, err := cmd.StderrPipe()
 	if err != nil {
 		t.Fatalf("stderr pipe: %v", err)
 	}
 	if err := cmd.Start(); err != nil {
-		t.Fatalf("start aria2c: %v", err)
+		t.Fatalf("start %s: %v", binary, err)
 	}
 	t.Cleanup(func() {
 		_ = cmd.Process.Kill()
@@ -231,16 +248,15 @@ func startAria2ForTest(t *testing.T, secret, scheme string, opts ...Option) *Cli
 	ctx, cancel := context.WithTimeout(t.Context(), 6*time.Second)
 	defer cancel()
 
+	opts = append(opts, WithSecret(secret))
+
 	var c *Client
 	for {
 		if ctx.Err() != nil {
 			b, _ := io.ReadAll(stderr)
-			t.Fatalf("aria2 rpc not ready: %v, stderr=%s", ctx.Err(), string(b))
+			t.Fatalf("%s rpc not ready: %v, stderr=%s", binary, ctx.Err(), string(b))
 		}
-
-		baseOpts := []Option{WithSecret(secret)}
-		baseOpts = append(baseOpts, opts...)
-		c, err = New(t.Context(), addr, baseOpts...)
+		c, err = New(t.Context(), addr, opts...)
 		if err == nil {
 			if _, e := c.GetVersion(t.Context()); e == nil {
 				break
@@ -249,12 +265,6 @@ func startAria2ForTest(t *testing.T, secret, scheme string, opts ...Option) *Cli
 		}
 		time.Sleep(150 * time.Millisecond)
 	}
-
-	t.Cleanup(func() {
-		shutdownCtx, shutdownCancel := context.WithTimeout(t.Context(), 2*time.Second)
-		defer shutdownCancel()
-		_, _ = c.ForceShutdown(shutdownCtx)
-	})
 
 	return c
 }

@@ -68,6 +68,7 @@ func WithNotificationCallbacks(callbacks NotificationCallbacks) Option {
 type Client struct {
 	secret string
 	raw    rawClient
+	next   nextClient
 	close  jsonrpc.ClientCloser
 
 	cbMu      sync.RWMutex
@@ -94,7 +95,7 @@ func New(ctx context.Context, addr string, opts ...Option) (*Client, error) {
 	allOpts = append(allOpts, jsonrpc.WithPingInterval(0), jsonrpc.WithResultUnmarshaler(unmarshalTime))
 	allOpts = append(allOpts, cfg.rpcOpts...)
 
-	closer, err := jsonrpc.NewClient(ctx, addr, "", &c.raw, cfg.headers, allOpts...)
+	closer, err := jsonrpc.NewMergeClient(ctx, addr, "", []any{&c.raw, &c.next}, cfg.headers, allOpts...)
 	if err != nil {
 		return nil, err
 	}
